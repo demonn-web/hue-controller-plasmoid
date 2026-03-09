@@ -1,4 +1,4 @@
-
+/*
  * SPDX-FileCopyrightText: 2026 mtorn <https://github.com/mtorn>
  * SPDX-License-Identifier: MIT
  *
