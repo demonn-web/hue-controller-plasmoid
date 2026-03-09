@@ -103,15 +103,20 @@ Item {
         }
     }
 
-    // Helper to filter compatible scenes (matching lights array).
+    // Helper to filter compatible scenes (subset matching: all scene lights exist in room/area).
     property var sceneList: {
         if (!hueApi || !hueApi.scenesModel || !roomLights) return []
         var compatible = []
-        var sortedRoomLights = roomLights.slice().sort().join(",")
         for (var i = 0; i < hueApi.scenesModel.count; i++) {
             var scene = hueApi.scenesModel.get(i)
-            var sortedSceneLights = scene.lights.slice().sort().join(",")
-            if (sortedSceneLights === sortedRoomLights) {
+            var allMatch = true
+            for (var j = 0; j < scene.lights.length; j++) {
+                if (!roomLights.includes(scene.lights[j])) {
+                    allMatch = false
+                    break
+                }
+            }
+            if (allMatch) {
                 compatible.push(scene)
             }
         }
