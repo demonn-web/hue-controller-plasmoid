@@ -12,27 +12,32 @@ import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents
 
 import "../components"
+import "../../code/HueConversions.js" as HueConv
 
 Item {
     id: lightsPage
     property var hueApi
     property var lightsModel
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Kirigami.Units.smallSpacing
+
         PlasmaComponents.Label {
             visible: lightsListView.count === 0
-            text: "No lights found.\nMake sure your bridge is connected."
+            text: "No lights found."
             horizontalAlignment: Text.AlignHCenter
             Layout.alignment: Qt.AlignCenter
             Layout.fillWidth: true
             Layout.fillHeight: true
             opacity: 0.6
         }
+
         Item {
             id: lightsListWrapper
             Layout.fillWidth: true
             Layout.fillHeight: true
+
             ListView {
                 id: lightsListView
                 anchors.fill: parent
@@ -40,6 +45,7 @@ Item {
                 model: lightsModel
                 spacing: Kirigami.Units.smallSpacing
                 clip: true
+
                 ScrollBar.vertical: ScrollBar {
                     id: lightsScrollBar
                     parent: lightsListView.parent
@@ -55,32 +61,30 @@ Item {
 
                     lightId: model.id || ""
                     lightName: model.name || "Unknown Light"
-                    lightOn: model.on || false
-                    lightBrightness: model.brightness || 0
+                    isOn: model.on || false
+                    brightness: model.brightness || 0
+                    hueApi: lightsPage.hueApi
 
-                    onToggle: (id, newState) => {
-                        if (hueApi) hueApi.putLight(id, { "on": { "on": newState } })
-                        if (lightsModel) {
-                            lightsModel.setProperty(index, "on", newState)
-                        }
-                        if (hueApi) {
-                            hueApi.updateAllLightsOn()
-                        }
+                    onToggled: (newState) => {
+                        hueApi.putLight(lightId, { "on": newState })
+                        // Optimistic update
+                        lightsModel.setProperty(index, "on", newState)
                     }
 
-                    onBrightnessChange: (id, newValue) => {
-                        if (hueApi) hueApi.putLight(id, { "dimming": { "brightness": newValue } })
-                        if (lightsModel) {
-                            lightsModel.setProperty(index, "brightness", newValue)
-                        }
+                    onUserBrightnessChange: (newValue) => {
+                        hueApi.putLight(lightId, { "dimming": { "brightness": newValue } })
+                        // Optimistic update
+                        lightsModel.setProperty(index, "brightness", newValue)
                     }
 
-                    onColorChange: (id, hue, sat) => {
-                        if (hueApi) hueApi.setLightColor(id, hue, sat)
+                    onColorChanged: (newColor) => {
+                        var hue = newColor.hsvHue
+                        var sat = newColor.hsvSaturation
+                        hueApi.setLightColor(lightId, hue, sat)
                     }
 
-                    onTemperatureChange: (id, kelvin) => {
-                        if (hueApi) hueApi.setLightTemperature(id, kelvin)
+                    onTemperatureChanged: (kelvin) => {
+                        hueApi.setLightTemperature(lightId, kelvin)
                     }
                 }
             }
