@@ -1,44 +1,78 @@
-/*
- * SPDX-FileCopyrightText: 2026 mtorn <https://github.com/mtorn>
- * SPDX-License-Identifier: MIT
- *
- * HueConversions.js - Shared helpers for Hue v1 unit conversions.
- */
-.pragma library
-
-function clamp(value, minValue, maxValue) {
-    if (value < minValue) return minValue
-    if (value > maxValue) return maxValue
-    return value
+function briToPercent(bri) {
+    return Math.round((bri / 254) * 100);
 }
 
 function percentToBri(percent) {
-    var p = isNaN(percent) ? 0 : percent
-    p = clamp(p, 0, 100)
-    return Math.round(p * 254 / 100)
-}
-
-function briToPercent(bri) {
-    var b = isNaN(bri) ? 0 : bri
-    b = clamp(b, 0, 254)
-    return Math.round(b / 254 * 100)
+    return Math.round((percent / 100) * 254);
 }
 
 function hue01ToV1(hue) {
-    var h = isNaN(hue) ? 0 : hue
-    h = clamp(h, 0, 1)
-    return Math.round(h * 65535)
+    return Math.round(hue * 65535);
 }
 
 function sat01ToV1(sat) {
-    var s = isNaN(sat) ? 0 : sat
-    s = clamp(s, 0, 1)
-    return Math.round(s * 254)
+    return Math.round(sat * 254);
 }
 
 function kelvinToMired(kelvin) {
-    var k = isNaN(kelvin) ? 0 : kelvin
-    if (k <= 0) return 153
-    var mired = Math.round(1000000 / k)
-    return clamp(mired, 153, 500)
+    return Math.round(1000000 / kelvin);
+}
+
+// New: Approximate color temperature to RGB (simplified Kelvin to RGB conversion)
+function ctToRgb(ct) {
+    console.log("Converting ct to RGB: ct = " + ct);  // Debug log
+    var temp = 1000000 / ct;  // Mired to Kelvin
+    temp = temp / 100;
+    var red, green, blue;
+
+    if (temp <= 66) {
+        red = 255;
+        green = temp;
+        green = 99.4708025861 * Math.log(green) - 161.1195681661;
+        blue = (temp <= 19) ? 0 : (temp - 10);
+        blue = 138.5177312231 * Math.log(blue) - 305.0447927307;
+    } else {
+        red = temp - 60;
+        red = 329.698727446 * Math.pow(red, -0.1332047592);
+        green = temp - 60;
+        green = 288.1221695283 * Math.pow(green, -0.0755148492);
+        blue = 255;
+    }
+
+    red = clamp(red, 0, 255);
+    green = clamp(green, 0, 255);
+    blue = clamp(blue, 0, 255);
+
+    console.log("Converted RGB: " + red + ", " + green + ", " + blue);  // Debug log
+    return Qt.rgba(red / 255, green / 255, blue / 255, 1.0);
+}
+
+// New: Convert CIE xy to RGB (assuming sRGB, simplified with gamma correction)
+function xyToRgb(x, y, bri) {
+    console.log("Converting xy to RGB: x = " + x + ", y = " + y + ", bri = " + bri);  // Debug log
+    var z = 1.0 - x - y;
+    var Y = bri;  // Luminance
+    var X = (Y / y) * x;
+    var Z = (Y / y) * z;
+
+    var r = X * 1.656492 - Y * 0.354851 - Z * 0.255038;
+    var g = -X * 0.707196 + Y * 1.655397 + Z * 0.036152;
+    var b = X * 0.051713 + Y * 0.121364 + Z * 1.011530;
+
+    // Gamma correction approximation
+    r = (r > 0.0031308) ? (1.055 * Math.pow(r, (1 / 2.4)) - 0.055) : 12.92 * r;
+    g = (g > 0.0031308) ? (1.055 * Math.pow(g, (1 / 2.4)) - 0.055) : 12.92 * g;
+    b = (b > 0.0031308) ? (1.055 * Math.pow(b, (1 / 2.4)) - 0.055) : 12.92 * b;
+
+    r = clamp(r, 0, 1);
+    g = clamp(g, 0, 1);
+    b = clamp(b, 0, 1);
+
+    console.log("Converted RGB: " + (r * 255) + ", " + (g * 255) + ", " + (b * 255));  // Debug log
+    return Qt.rgba(r, g, b, 1.0);
+}
+
+// Helper clamp function
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
 }
