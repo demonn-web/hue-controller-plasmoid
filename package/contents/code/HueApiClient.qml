@@ -217,7 +217,7 @@ QtObject {
                 if (xhr.status === 200 || xhr.status === 201 || xhr.status === 204) {
                     if (callback) {
                         try {
-                            var response = xhr.responseText ? JSON.parse(xhr.responseText) : {}
+                            var response = JSON.parse(xhr.responseText)
                             callback(response)
                         } catch (e) {
                             requestError(endpoint, "Failed to parse response.")
@@ -285,12 +285,34 @@ QtObject {
                 var onState = item.state ? item.state.on : false
                 var brightness = item.state && item.state.bri ? HueConv.briToPercent(item.state.bri) : 100
 
+                // New: Parse current color state
+                var currentColor = "#FFFF00"  // Default to yellow if no color data (fallback for the bug)
+                var colorMode = item.state ? item.state.colormode : "hs"
+                var hue = item.state ? item.state.hue / 65535 : 0.1667  // Normalize to 0-1 for Qt.hsva (yellow hue ~0.1667)
+                var sat = item.state ? item.state.sat / 254 : 1.0  // Normalize to 0-1
+                var ct = item.state ? item.state.ct : 4000  // Default neutral white
+                if (colorMode === "hs" && item.state.hue !== undefined && item.state.sat !== undefined) {
+                    currentColor = Qt.hsva(hue, sat, 1.0, 1.0)  // Full value for vibrant color
+                } else if (colorMode === "ct") {
+                    // Approximate color temp to RGB (simplified; full conversion in HueConversions.js if needed)
+                    currentColor = HueConv.ctToRgb(ct)  // Assume you add this function to HueConversions.js
+                } else if (colorMode === "xy") {
+                    // Convert xy to RGB if xy present (add to HueConversions.js if not)
+                    var xy = item.state ? item.state.xy : [0.5, 0.5]
+                    currentColor = HueConv.xyToRgb(xy[0], xy[1], item.state.bri / 254)
+                }
+
                 updateModel(lightsModel, id, {
                     "id": id,
                     "name": name,
                     "on": onState,
                     "brightness": brightness,
-                    "type": "light"
+                    "type": "light",
+                    "color": currentColor,  // New property for current color
+                    "colorMode": colorMode,  // New
+                    "hue": hue,  // New
+                    "sat": sat,  // New
+                    "ct": ct  // New
                 })
             }
         }
@@ -329,8 +351,7 @@ QtObject {
                 var brightness = item.action && item.action.bri ? HueConv.briToPercent(item.action.bri) : 0
 
                 var type = item.type || "Room"
-                // Skip Entertainment areas; they don't behave like rooms.
-                if (type === "Entertainment") continue
+                // No longer skip Entertainment; include all for filtering in pages
 
                 seen[id] = true
                 updateModel(roomsModel, id, {
