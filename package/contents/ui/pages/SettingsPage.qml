@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: 2026 mtorn <https://github.com/mtorn>
  * SPDX-License-Identifier: MIT
  *
- * SettingsPage.qml - Bridge setup, pairing, and polling options.
+ * SettingsPage.qml - Configuration for poll interval, bridge IP, and pairing.
  */
 
 import QtQuick
@@ -10,117 +10,99 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents
-import org.kde.plasma.plasmoid
-import "../UiConstants.js" as UiConstants
 
 Item {
     id: settingsPage
     property var hueApi
-    property bool hasApiKey: (Plasmoid.configuration.username && Plasmoid.configuration.username.length > 0) ||
-        (hueApi && hueApi.username && hueApi.username.length > 0)
-    property string errorMessage: ""
-
-    function showError(msg) {
-        errorMessage = msg
-    }
-
-    Connections {
-        target: hueApi
-        function onDiscoveryError(msg) { settingsPage.showError("Discovery Error: " + msg) }
-        function onPairingError(msg) { settingsPage.showError("Pairing Error: " + msg) }
-        function onRequestError(endpoint, msg) { settingsPage.showError("Request Error (" + endpoint + "): " + msg) }
-    }
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Kirigami.Units.largeSpacing
-        spacing: Kirigami.Units.largeSpacing
-        Kirigami.FormLayout {
+        anchors.margins: Kirigami.Units.smallSpacing
+
+        PlasmaComponents.Label {
+            text: "Hue Bridge Setup"
+            font.bold: true
             Layout.fillWidth: true
-            PlasmaComponents.TextField {
-                id: bridgeIpField
-                Kirigami.FormData.label: "Bridge IP:"
-                placeholderText: "e.g., 192.168.1.100"
-                text: hueApi ? hueApi.bridgeIp : (Plasmoid.configuration.bridgeIp || "")
-                onEditingFinished: {
-                    Plasmoid.configuration.bridgeIp = text
-                    if (hueApi) hueApi.bridgeIp = text
-                }
-            }
-            PlasmaComponents.SpinBox {
-                id: pollIntervalSpinBox
-                Kirigami.FormData.label: "Poll Interval (s):"
-                from: UiConstants.pollIntervalMin
-                to: UiConstants.pollIntervalMax
-                value: Plasmoid.configuration.pollInterval || UiConstants.pollIntervalDefault
-                onValueModified: {
-                    Plasmoid.configuration.pollInterval = value
+        }
+
+        PlasmaComponents.TextField {
+            id: bridgeIpField
+            placeholderText: "Bridge IP (e.g., 192.168.1.100)"
+            text: hueApi ? hueApi.bridgeIp : ""
+            Layout.fillWidth: true
+            onEditingFinished: {
+                if (hueApi) {
+                    hueApi.bridgeIp = text.trim()
+                    Plasmoid.configuration.bridgeIp = text.trim()
                 }
             }
         }
+
         PlasmaComponents.Button {
+            text: "Discover Bridge"
             Layout.fillWidth: true
-            text: "Auto-discover Bridge"
-            icon.name: "edit-find"
             onClicked: {
-                settingsPage.errorMessage = ""
                 if (hueApi) hueApi.discoverBridge()
             }
         }
-        Kirigami.InlineMessage {
-            id: settingsErrorMessage
-            Layout.fillWidth: true
-            text: settingsPage.errorMessage
-            type: Kirigami.MessageType.Error
-            visible: settingsPage.errorMessage.length > 0
-            actions: [
-                Kirigami.Action {
-                    icon.name: "dialog-close"
-                    text: "Dismiss"
-                    onTriggered: settingsPage.errorMessage = ""
-                }
-            ]
-        }
-        Kirigami.Separator {
-            Layout.fillWidth: true
-        }
 
         PlasmaComponents.Label {
-            text: "Bridge Pairing"
-            font.bold: true
-        }
-
-        PlasmaComponents.Label {
+            text: hueApi ? hueApi.status : "Disconnected"
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: "Press the link button on your Hue Bridge, then click 'Pair' below."
-            opacity: 0.7
+            color: Kirigami.Theme.disabledTextColor
         }
-        PlasmaComponents.Button {
+
+        PlasmaComponents.TextField {
+            id: usernameField
+            placeholderText: "Username (auto-generated after pairing)"
+            text: hueApi ? hueApi.username : ""
+            readOnly: true
             Layout.fillWidth: true
+        }
+
+        PlasmaComponents.Button {
             text: "Pair with Bridge"
-            icon.name: "network-connect"
-            enabled: bridgeIpField.text.length > 0
+            Layout.fillWidth: true
+            enabled: hueApi && hueApi.bridgeIp && !hueApi.username
             onClicked: {
-                settingsPage.errorMessage = ""
-                if (hueApi) {
-                    hueApi.bridgeIp = bridgeIpField.text
-                    hueApi.createUser("plasma-hue", "kde-desktop")
-                }
+                if (hueApi) hueApi.createUser("Hue Controller", "Plasma Widget")
             }
         }
-        PlasmaComponents.Button {
+
+        PlasmaComponents.Label {
+            text: "Press the link button on your Hue Bridge before pairing."
             Layout.fillWidth: true
-            text: "Clear API Username"
-            icon.name: "edit-clear"
-            visible: hasApiKey
+            wrapMode: Text.WordWrap
+            visible: hueApi && hueApi.status === "Press Link Button"
+            color: Kirigami.Theme.negativeTextColor
+        }
+
+        Item { height: Kirigami.Units.largeSpacing }
+
+        PlasmaComponents.Label {
+            text: "Poll Interval (seconds)"
+            Layout.fillWidth: true
+        }
+
+        PlasmaComponents.SpinBox {
+            from: 0
+            to: 3600
+            value: Plasmoid.configuration.pollInterval
+            editable: true
+            Layout.fillWidth: true
+            onValueModified: (newValue) => {
+                Plasmoid.configuration.pollInterval = newValue
+            }
+        }
+
+        PlasmaComponents.Button {
+            text: "Clear Pairing"
+            Layout.fillWidth: true
             onClicked: {
                 Plasmoid.configuration.username = ""
                 if (hueApi) hueApi.username = ""
             }
-        }
-        Item {
-            Layout.fillHeight: true
         }
     }
 }
