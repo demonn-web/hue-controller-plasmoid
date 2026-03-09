@@ -2,108 +2,95 @@
  * SPDX-FileCopyrightText: 2026 mtorn <https://github.com/mtorn>
  * SPDX-License-Identifier: MIT
  *
- * FullRepresentation.qml - Popup content shown when the tray icon is clicked.
+ * FullRepresentation.qml - The expanded popup view.
  */
 
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
-import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents
-import org.kde.plasma.plasmoid
+import org.kde.kirigami as Kirigami
 
-import "pages"
-import "components"
+import "pages" as Pages
+import "components" as Components
 
 Item {
-    id: fullRoot
+    id: fullRepresentation
     property var hueApi
+    property bool bridgeConfigured: hueApi && hueApi.bridgeIp && hueApi.username
 
-    implicitWidth: Kirigami.Units.gridUnit * 20
-    implicitHeight: Kirigami.Units.gridUnit * 10
-    clip: true
-
-    Layout.minimumWidth: Kirigami.Units.gridUnit * 15
-    Layout.minimumHeight: 0
-
+    function showErrorMessage(msg) {
+        errorLabel.text = msg
+        errorLabel.visible = true
+        errorHideTimer.restart()
+    }
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 0
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.smallSpacing
+        anchors.margins: Kirigami.Units.smallSpacing
 
-            StatusIndicator {
-                id: statusIndicator
-                status: hueApi ? hueApi.status : "Disconnected"
-            }
-            PlasmaComponents.Label {
-                text: "Hue Controller"
-                font.bold: true
-                Layout.fillWidth: true
-            }
-            PlasmaComponents.Switch {
-                id: masterSwitch
-                text: "All"
-                enabled: hueApi && hueApi.lightsModel && hueApi.lightsModel.count > 0
-                onClicked: {
-                    if (hueApi) hueApi.toggleAll(checked)
-                }
-            }
-        }
-        Binding {
-            target: masterSwitch
-            property: "checked"
-            value: hueApi ? hueApi.allLightsOn : false
-        }
-        Kirigami.InlineMessage {
-            id: errorMessage
-            Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.smallSpacing
-            type: Kirigami.MessageType.Error
-            showCloseButton: true
-            visible: text.length > 0
-        }
         PlasmaComponents.TabBar {
-            id: tabBar
+            id: mainTabBar
             Layout.fillWidth: true
+            visible: bridgeConfigured
 
+            PlasmaComponents.TabButton {
+                text: "Lights"
+            }
             PlasmaComponents.TabButton {
                 text: "Rooms"
             }
             PlasmaComponents.TabButton {
-                text: "Lights"
+                text: "Scenes"
             }
-
             PlasmaComponents.TabButton {
                 text: "Settings"
-                icon.name: "configure"
             }
         }
+
         StackLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.minimumHeight: 0
-            currentIndex: tabBar.currentIndex
-            RoomsPage {
-                hueApi: fullRoot.hueApi
-                roomsModel: hueApi ? hueApi.roomsModel : null
+            currentIndex: bridgeConfigured ? mainTabBar.currentIndex + 1 : 0
+
+            Pages.PairingPage {
+                visible: !bridgeConfigured
+                hueApi: fullRepresentation.hueApi
             }
 
-            LightsPage {
-                hueApi: fullRoot.hueApi
-                lightsModel: hueApi ? hueApi.lightsModel : null
+            Pages.LightsPage {
+                hueApi: fullRepresentation.hueApi
+                lightsModel: fullRepresentation.hueApi ? fullRepresentation.hueApi.lightsModel : null
             }
 
-            SettingsPage {
-                hueApi: fullRoot.hueApi
+            Pages.RoomsPage {
+                hueApi: fullRepresentation.hueApi
+                roomsModel: fullRepresentation.hueApi ? fullRepresentation.hueApi.roomsModel : null
+            }
+
+            Pages.ScenesPage {
+                hueApi: fullRepresentation.hueApi
+                scenesModel: fullRepresentation.hueApi ? fullRepresentation.hueApi.scenesModel : null
+                roomsModel: fullRepresentation.hueApi ? fullRepresentation.hueApi.roomsModel : null
+            }
+
+            Pages.SettingsPage {
+                hueApi: fullRepresentation.hueApi
             }
         }
+
+        PlasmaComponents.Label {
+            id: errorLabel
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            visible: false
+            color: Kirigami.Theme.negativeTextColor
+        }
     }
-    // Show errors from the API layer in the inline banner.
-    function showErrorMessage(msg) {
-        errorMessage.text = msg
-        errorMessage.visible = true
+
+    Timer {
+        id: errorHideTimer
+        interval: 5000
+        repeat: false
+        onTriggered: errorLabel.visible = false
     }
 }
