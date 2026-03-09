@@ -59,6 +59,8 @@ Item {
                     isOn: model.on || false
                     brightness: model.brightness || 0
                     lightCount: model.lightCount || 0
+                    hueApi: roomsPage.hueApi
+                    roomLights: model.lights || []
 
                     onToggled: (newState) => {
                         hueApi.putGroup(roomId, { "on": newState })
