@@ -18,6 +18,8 @@ Item {
     property bool isOn: false
     property int brightness: 0
     property int lightCount: 0
+    property var hueApi: null
+    property var roomLights: []
     signal toggled(bool on)
     signal userBrightnessChange(int value)
     signal roomClicked()
@@ -87,5 +89,32 @@ Item {
                 }
             }
         }
+        PlasmaComponents.ComboBox {
+            Layout.fillWidth: true
+            visible: roomControl.isOn && sceneList.length > 0
+            model: sceneList
+            textRole: "name"
+            onActivated: (index) => {
+                var selectedScene = sceneList[index]
+                if (selectedScene) {
+                    hueApi.recallScene(roomControl.roomId, selectedScene.id)
+                }
+            }
+        }
+    }
+
+    // Helper to filter compatible scenes (matching lights array).
+    property var sceneList: {
+        if (!hueApi || !hueApi.scenesModel || !roomLights) return []
+        var compatible = []
+        var sortedRoomLights = roomLights.slice().sort().join(",")
+        for (var i = 0; i < hueApi.scenesModel.count; i++) {
+            var scene = hueApi.scenesModel.get(i)
+            var sortedSceneLights = scene.lights.slice().sort().join(",")
+            if (sortedSceneLights === sortedRoomLights) {
+                compatible.push(scene)
+            }
+        }
+        return compatible
     }
 }
