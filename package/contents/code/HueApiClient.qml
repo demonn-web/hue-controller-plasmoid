@@ -15,64 +15,42 @@ import "HueConversions.js" as HueConv
 QtObject {
     id: hueApi
 
-
-    
     property string bridgeIp: ""
 
-    
     property string username: ""
 
-    
     property string status: "Disconnected"
 
-    
     property bool discoveryInFlight: false
 
-    
     property int discoveryCooldownUntil: 0
 
-    
     property int discoveryMinIntervalSeconds: 10
 
-    
     property int discoveryCooldownSeconds: 60
 
-    
     property int requestTimeoutMs: 10000
 
-
-    
     property var lightsModel: null
 
-    
     property var roomsModel: null
 
-    
+    property var scenesModel: null
+
     property bool allLightsOn: false
 
-
-
-
-    
     signal bridgeDiscovered(string ip)
 
-    
     signal pairingSuccess(string username)
 
-    
     signal pairingError(string message)
 
-    
     signal discoveryError(string message)
 
-    
     signal requestError(string endpoint, string message)
 
-    
     signal dataRefreshed()
 
-
-    
     function discoverBridge() {
         var now = _nowSeconds()
         if (discoveryInFlight) {
@@ -143,13 +121,10 @@ QtObject {
         xhr.send()
     }
 
-
-    
     function _nowSeconds() {
         return Math.floor(Date.now() / 1000)
     }
 
-    
     function _parseRetryAfter(header) {
         if (!header) return discoveryCooldownSeconds
 
@@ -165,8 +140,6 @@ QtObject {
         return discoveryCooldownSeconds
     }
 
-
-    
     function createUser(appName, deviceName) {
         if (!bridgeIp) {
             pairingError("Bridge IP not set.")
@@ -223,8 +196,6 @@ QtObject {
         xhr.send(body)
     }
 
-
-    
     function request(method, endpoint, body, callback) {
         if (!bridgeIp || !username) {
             return
@@ -287,23 +258,19 @@ QtObject {
         }
     }
 
-
-    
     function refreshData() {
         if (!bridgeIp || !username) return
 
         status = "Refreshing..."
         getLights()
         getRooms()
+        getScenes()
     }
 
-
-    
     function getLights() {
         request("GET", "lights", null, parseLights)
     }
 
-    
     function parseLights(response) {
         if (!response) return
         if (!lightsModel) return
@@ -343,12 +310,10 @@ QtObject {
 
     // Rooms are exposed as "groups" in the v1 API.
 
-    
     function getRooms() {
         request("GET", "groups", null, parseRooms)
     }
 
-    
     function parseRooms(response) {
         if (!response) return
         if (!roomsModel) return
@@ -389,16 +354,32 @@ QtObject {
         }
     }
 
-    
-    function putGroup(id, params) {
-        request("PUT", "groups/" + id + "/action", params, function(resp) {
-        })
+    function getScenes() {
+        request("GET", "scenes", null, parseScenes)
     }
 
+    function parseScenes(response) {
+        if (scenesModel) {
+            scenesModel.clear()
+            for (var id in response) {
+                var scene = response[id]
+                scenesModel.append({
+                    id: id,
+                    name: scene.name || "Unnamed Scene",
+                    lights: scene.lights || []
+                })
+            }
+        }
+    }
 
+    function recallScene(groupId, sceneId) {
+        putGroup(groupId, { "scene": sceneId })
+    }
 
+    function putGroup(id, params) {
+        request("PUT", "groups/" + id + "/action", params, null)
+    }
 
-    
     function updateModel(model, id, newData) {
         for (var i = 0; i < model.count; i++) {
             if (model.get(i).id === id) {
@@ -409,8 +390,6 @@ QtObject {
         model.append(newData)
     }
 
-
-    
     function putLight(id, params) {
         // Convert the v2-style payload to v1 fields.
         var v1Params = {}
@@ -421,11 +400,9 @@ QtObject {
             v1Params.bri = HueConv.percentToBri(params.dimming.brightness)
         }
         
-        request("PUT", "lights/" + id + "/state", v1Params, function(resp) {
-        })
+        request("PUT", "lights/" + id + "/state", v1Params, null)
     }
 
-    
     function setLightColor(id, hue, sat) {
         // Hue v1 expects hue 0-65535 and sat 0-254.
         var hueValue = HueConv.hue01ToV1(hue)
@@ -434,29 +411,24 @@ QtObject {
         request("PUT", "lights/" + id + "/state", {
             "hue": hueValue,
             "sat": satValue
-        }, function(resp) {
-        })
+        }, null)
     }
 
-    
     function setLightTemperature(id, kelvin) {
         // Hue expects mireds, clamped to the bridge's supported range.
         var mired = HueConv.kelvinToMired(kelvin)
         
         request("PUT", "lights/" + id + "/state", {
             "ct": mired
-        }, function(resp) {
-        })
+        }, null)
     }
 
-    
     function toggleAll(state) {
         if (!lightsModel) return
 
         for (var i = 0; i < lightsModel.count; i++) {
             var id = lightsModel.get(i).id
-            request("PUT", "lights/" + id + "/state", { "on": state }, function(resp) {
-            })
+            request("PUT", "lights/" + id + "/state", { "on": state }, null)
             // Optimistic update keeps the UI responsive.
             lightsModel.setProperty(i, "on", state)
         }
@@ -470,12 +442,10 @@ QtObject {
         allLightsOn = state
     }
 
-    
     function updateAllLightsOn() {
         _recomputeAllLightsOn()
     }
 
-    
     function _recomputeAllLightsOn() {
         if (!lightsModel || lightsModel.count === 0) {
             allLightsOn = false
@@ -491,6 +461,5 @@ QtObject {
         }
         allLightsOn = allOn
     }
-
 
 }
