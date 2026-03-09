@@ -47,12 +47,14 @@ PlasmoidItem {
     ]
     HueCode.LightsModel { id: lightsModel }
     HueCode.RoomsModel { id: roomsModel }
+    HueCode.ScenesModel { id: scenesModel }
     HueCode.HueApiClient {
         id: hueApiClient
         bridgeIp: Plasmoid.configuration.bridgeIp
         username: Plasmoid.configuration.username
         lightsModel: lightsModel
         roomsModel: roomsModel
+        scenesModel: scenesModel
         onBridgeDiscovered: (ip) => {
             Plasmoid.configuration.bridgeIp = ip
         }
