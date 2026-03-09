@@ -20,7 +20,6 @@ function kelvinToMired(kelvin) {
 
 // New: Approximate color temperature to RGB (simplified Kelvin to RGB conversion)
 function ctToRgb(ct) {
-    console.log("Converting ct to RGB: ct = " + ct);  // Debug log
     var temp = 1000000 / ct;  // Mired to Kelvin
     temp = temp / 100;
     var red, green, blue;
@@ -43,13 +42,11 @@ function ctToRgb(ct) {
     green = clamp(green, 0, 255);
     blue = clamp(blue, 0, 255);
 
-    console.log("Converted RGB: " + red + ", " + green + ", " + blue);  // Debug log
     return Qt.rgba(red / 255, green / 255, blue / 255, 1.0);
 }
 
 // New: Convert CIE xy to RGB (assuming sRGB, simplified with gamma correction)
 function xyToRgb(x, y, bri) {
-    console.log("Converting xy to RGB: x = " + x + ", y = " + y + ", bri = " + bri);  // Debug log
     var z = 1.0 - x - y;
     var Y = bri;  // Luminance
     var X = (Y / y) * x;
@@ -68,7 +65,6 @@ function xyToRgb(x, y, bri) {
     g = clamp(g, 0, 1);
     b = clamp(b, 0, 1);
 
-    console.log("Converted RGB: " + (r * 255) + ", " + (g * 255) + ", " + (b * 255));  // Debug log
     return Qt.rgba(r, g, b, 1.0);
 }
 
