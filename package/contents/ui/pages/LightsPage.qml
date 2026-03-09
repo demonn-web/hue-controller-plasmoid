@@ -63,6 +63,11 @@ Item {
                     lightName: model.name || "Unknown Light"
                     isOn: model.on || false
                     brightness: model.brightness || 0
+                    currentColor: model.color || "#FFFF00"  // Pass from model
+                    colorMode: model.colorMode || "hs"  // Pass from model
+                    hue: model.hue || 0.1667  // Pass from model
+                    sat: model.sat || 1.0  // Pass from model
+                    ct: model.ct || 4000  // Pass from model
                     hueApi: lightsPage.hueApi
 
                     onToggled: (newState) => {
@@ -81,13 +86,26 @@ Item {
                         var hue = newColor.hsvHue
                         var sat = newColor.hsvSaturation
                         hueApi.setLightColor(lightId, hue, sat)
+                        // Optimistic update
+                        lightsModel.setProperty(index, "color", newColor)
+                        lightsModel.setProperty(index, "hue", hue)
+                        lightsModel.setProperty(index, "sat", sat)
+                        lightsModel.setProperty(index, "colorMode", "hs")
                     }
 
                     onTemperatureChanged: (kelvin) => {
                         hueApi.setLightTemperature(lightId, kelvin)
+                        // Optimistic update
+                        lightsModel.setProperty(index, "ct", kelvin)
+                        lightsModel.setProperty(index, "color", HueConv.ctToRgb(kelvin))
+                        lightsModel.setProperty(index, "colorMode", "ct")
                     }
                 }
             }
         }
+    }
+
+    Component.onCompleted: {
+        if (hueApi) hueApi.refreshData()  // Force refresh on tab load to ensure data
     }
 }
