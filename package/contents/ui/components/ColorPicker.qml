@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  *
  * ColorPicker.qml - Simple color and temperature picker.
+ * Rewritten version with fix for unintended temperature resets on initialization.
+ * Changed tempSlider signal from onValueChanged to onMoved to prevent automatic API calls during component creation.
  */
 
 import QtQuick
@@ -173,7 +175,7 @@ Item {
                     value: colorPicker.colorTemperature
                     stepSize: 100
 
-                    onValueChanged: {
+                    onMoved: {
                         colorPicker.colorTemperature = value
                         colorPicker.queueTemperature(value)
                     }
