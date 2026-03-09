@@ -40,6 +40,9 @@ Item {
                 text: "Rooms"
             }
             PlasmaComponents.TabButton {
+                text: "Entertainment"
+            }
+            PlasmaComponents.TabButton {
                 text: "Scenes"
             }
             PlasmaComponents.TabButton {
@@ -63,6 +66,11 @@ Item {
             }
 
             Pages.RoomsPage {
+                hueApi: fullRepresentation.hueApi
+                roomsModel: fullRepresentation.hueApi ? fullRepresentation.hueApi.roomsModel : null
+            }
+
+            Pages.EntertainmentPage {
                 hueApi: fullRepresentation.hueApi
                 roomsModel: fullRepresentation.hueApi ? fullRepresentation.hueApi.roomsModel : null
             }
