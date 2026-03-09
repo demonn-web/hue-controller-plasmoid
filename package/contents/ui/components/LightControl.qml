@@ -10,6 +10,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents
+import Qt5Compat.GraphicalEffects  // For ColorOverlay on Qt6/Plasma 6
 
 Item {
     id: lightControl
@@ -24,7 +25,7 @@ Item {
     property int ct: 4000
     property bool supportsColor: true  // Assume true; adjust based on model if available
     property bool supportsTemperature: true
-    property var hueApi: null  // Added this property to fix the assignment error
+    property var hueApi: null
 
     signal toggled(bool on)
     signal userBrightnessChange(int value)
@@ -52,10 +53,21 @@ Item {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
 
-            Kirigami.Icon {
-                source: "lightbulb"
+            Item {
                 Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                 Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+
+                Kirigami.Icon {
+                    id: lightIcon
+                    anchors.fill: parent
+                    source: "lightbulb"
+                }
+
+                ColorOverlay {
+                    anchors.fill: lightIcon
+                    source: lightIcon
+                    color: lightControl.isOn ? lightControl.currentColor : Kirigami.Theme.disabledTextColor
+                }
             }
 
             ColumnLayout {
@@ -67,17 +79,6 @@ Item {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
                 }
-            }
-
-            // New: Current color indicator
-            Rectangle {
-                width: Kirigami.Units.gridUnit * 1.5
-                height: Kirigami.Units.gridUnit * 1.5
-                radius: Kirigami.Units.smallSpacing
-                color: lightControl.currentColor
-                border.width: 1
-                border.color: Kirigami.Theme.disabledTextColor
-                visible: lightControl.isOn && (supportsColor || supportsTemperature)
             }
 
             PlasmaComponents.Switch {
